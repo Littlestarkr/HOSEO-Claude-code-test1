@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>종합 상식 퀴즈</title>
+<style>
+  :root {
+    --bg: #f4f6fa;
+    --card: #ffffff;
+    --text: #1d2433;
+    --muted: #6b7385;
+    --line: #e3e7ef;
+    --primary: #3b5bdb;
+    --good: #2b9348;
+    --bad: #d64545;
+    --c-history: #e5484d;
+    --c-science: #2f80ed;
+    --c-geo: #1f9d6b;
+    --c-general: #e9890c;
+    --accent: var(--primary);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Segoe UI", sans-serif;
+    line-height: 1.55;
+    -webkit-text-size-adjust: 100%;
+  }
+  #app { max-width: 560px; margin: 0 auto; padding: 16px; min-height: 100vh; }
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 20px 18px;
+    box-shadow: 0 1px 2px rgba(20, 30, 60, .06);
+    border: 1px solid var(--line);
+  }
+  h1 { font-size: 26px; margin: 8px 0 6px; line-height: 1.3; word-break: keep-all; }
+  h2 { font-size: 20px; margin: 0 0 8px; word-break: keep-all; }
+  p { margin: 0 0 10px; word-break: keep-all; }
+  .muted { color: var(--muted); }
+  .center { text-align: center; }
+
+  .btn {
+    appearance: none; border: 0; cursor: pointer;
+    min-height: 48px; padding: 0 20px; border-radius: 12px;
+    font: inherit; font-weight: 700; font-size: 16px;
+    background: var(--accent); color: #fff;
+  }
+  .btn.ghost { background: #eceff6; color: var(--text); }
+  .btn:disabled { opacity: .4; cursor: default; }
+  .btn.block { width: 100%; }
+  .row { display: flex; gap: 10px; margin-top: 16px; }
+  .row .btn { flex: 1; }
+
+  /* 시작 화면 */
+  .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0 22px; }
+  .cat-chip {
+    border-radius: 12px; padding: 12px; background: #f6f8fc;
+    border-left: 6px solid var(--accent); font-weight: 700;
+  }
+  .cat-chip small { display: block; font-weight: 400; color: var(--muted); }
+
+  /* 분야별 포인트 색 */
+  [data-cat="한국사"] { --accent: var(--c-history); }
+  [data-cat="과학"] { --accent: var(--c-science); }
+  [data-cat="지리"] { --accent: var(--c-geo); }
+  [data-cat="일반상식"] { --accent: var(--c-general); }
+
+  /* 문제 화면 */
+  .q-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .badge {
+    display: inline-block; padding: 4px 12px; border-radius: 999px;
+    background: var(--accent); color: #fff; font-weight: 700; font-size: 14px;
+  }
+  .count { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .bar { height: 8px; background: #e6eaf2; border-radius: 999px; overflow: hidden; margin-bottom: 18px; }
+  .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width .25s; }
+  .question { font-size: 19px; font-weight: 700; margin: 0 0 16px; word-break: keep-all; overflow-wrap: anywhere; }
+  .choices { display: flex; flex-direction: column; gap: 10px; }
+  .choice {
+    appearance: none; text-align: left; cursor: pointer;
+    min-height: 52px; padding: 10px 14px; border-radius: 12px;
+    border: 2px solid var(--line); background: #fff; color: var(--text);
+    font: inherit; font-size: 16px; display: flex; align-items: center; gap: 10px;
+    word-break: keep-all; overflow-wrap: anywhere;
+  }
+  .choice .no { font-weight: 800; color: var(--muted); flex: none; }
+  .choice.sel { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, #fff); }
+  .choice.sel .no { color: var(--accent); }
+
+  /* 분야 전환 안내 / 제출 확인 */
+  .big { font-size: 44px; margin: 6px 0 10px; }
+  .notice-num { font-size: 40px; font-weight: 800; color: var(--primary); }
+  .tip { background: #fff7e6; border-radius: 10px; padding: 10px 12px; font-size: 14px; color: #7a5200; margin-top: 8px; }
+
+  /* 결과 */
+  .score { font-size: 48px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .score small { font-size: 22px; color: var(--muted); font-weight: 600; }
+  .grade { display: inline-block; margin-top: 10px; padding: 6px 16px; border-radius: 999px; background: var(--primary); color: #fff; font-weight: 800; }
+  .section-title { font-size: 16px; font-weight: 800; margin: 22px 0 10px; }
+  .cat-score { margin-bottom: 12px; }
+  .cat-score .label { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+  .cat-score .track { height: 12px; background: #e6eaf2; border-radius: 999px; overflow: hidden; }
+  .cat-score .track i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+  .list { list-style: none; margin: 0; padding: 0; }
+  .item { border: 1px solid var(--line); border-radius: 12px; margin-bottom: 8px; overflow: hidden; background: #fff; }
+  .item-head {
+    appearance: none; width: 100%; border: 0; background: transparent; font: inherit; color: inherit; text-align: left;
+    display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 12px;
+  }
+  .item-head.clickable { cursor: pointer; }
+  .item .num { font-weight: 700; color: var(--muted); min-width: 28px; font-variant-numeric: tabular-nums; }
+  .item .qtext { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mark { width: 28px; height: 28px; flex: none; border-radius: 50%; color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 14px; }
+  .mark.o { background: var(--good); }
+  .mark.x { background: var(--bad); }
+  .tag { width: 8px; align-self: stretch; background: var(--accent); flex: none; border-radius: 4px; }
+  .detail { padding: 4px 14px 14px 56px; font-size: 14px; border-top: 1px dashed var(--line); }
+  .detail p { margin: 8px 0 0; }
+  .detail b.my { color: var(--bad); }
+  .detail b.ans { color: var(--good); }
+  .empty { padding: 20px; text-align: center; color: var(--muted); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ===== 문제 데이터 (answer: 정답 보기의 번호 0~3) =====
+const QUESTIONS = [
+  // ---------- 한국사 ----------
+  { category: "한국사", level: 1, question: "훈민정음(한글)을 창제한 조선의 왕은?", choices: ["세종", "태종", "성종", "영조"], answer: 0,
+    explanation: "세종은 1443년 훈민정음을 창제하고 1446년에 반포했습니다." },
+  { category: "한국사", level: 1, question: "임진왜란 때 한산도 대첩에서 일본 수군을 크게 물리친 장군은?", choices: ["권율", "이순신", "곽재우", "김시민"], answer: 1,
+    explanation: "이순신은 1592년 한산도 앞바다에서 학익진 전법으로 일본 수군을 크게 이겼습니다." },
+  { category: "한국사", level: 1, question: "일제강점기에 전국적으로 만세 운동이 일어난 3·1 운동은 몇 년에 일어났을까?", choices: ["1905년", "1910년", "1919년", "1945년"], answer: 2,
+    explanation: "3·1 운동은 1919년 3월 1일에 시작되었고, 이를 계기로 대한민국 임시정부가 수립되었습니다." },
+  { category: "한국사", level: 1, question: "고구려를 건국한 인물은?", choices: ["온조", "박혁거세", "김수로", "주몽"], answer: 3,
+    explanation: "주몽(동명성왕)이 기원전 37년 졸본에서 고구려를 세웠습니다. 온조는 백제, 박혁거세는 신라, 김수로는 금관가야의 시조입니다." },
+  { category: "한국사", level: 2, question: "고려 성종 때 거란의 1차 침입에서 소손녕과 담판을 벌여 강동 6주를 얻은 인물은?", choices: ["강감찬", "서희", "윤관", "최영"], answer: 1,
+    explanation: "서희는 993년 거란과의 외교 담판으로 침입을 물리치고 강동 6주를 확보했습니다." },
+  { category: "한국사", level: 2, question: "공물을 쌀·베·동전 등으로 대신 내게 한 제도로, 광해군 때 경기도에서 처음 시행된 것은?", choices: ["과전법", "균역법", "대동법", "직전법"], answer: 2,
+    explanation: "대동법은 특산물 대신 토지 결수에 따라 쌀 등을 내게 한 제도로, 1608년 경기도에서 시작되어 점차 확대되었습니다." },
+  { category: "한국사", level: 2, question: "조선 정조가 축조했고 1997년 유네스코 세계유산으로 등재된 성곽은?", choices: ["남한산성", "한양도성", "낙안읍성", "수원 화성"], answer: 3,
+    explanation: "수원 화성은 정조가 1794~1796년에 쌓은 성으로, 정약용이 설계에 참여했고 거중기 등이 사용되었습니다." },
+  { category: "한국사", level: 2, question: "1894년 전봉준 등이 이끌며 탐관오리 처벌과 폐정 개혁을 요구한 농민 운동은?", choices: ["동학 농민 운동", "홍경래의 난", "임술 농민 봉기", "삼별초 항쟁"], answer: 0,
+    explanation: "동학 농민 운동은 고부 군수 조병갑의 횡포를 계기로 일어나 전국으로 확산되었습니다." },
+  { category: "한국사", level: 3, question: "신라가 당나라 세력을 한반도에서 몰아내며 삼국 통일을 마무리한 676년의 전투는?", choices: ["황산벌 전투", "매소성 전투", "기벌포 전투", "안시성 전투"], answer: 2,
+    explanation: "신라는 675년 매소성에서 당 육군을, 676년 기벌포에서 당 수군을 격파하며 당을 몰아냈습니다." },
+  { category: "한국사", level: 3, question: "김종직의 「조의제문」이 발단이 되어 연산군 때 사림이 화를 입은 사건은?", choices: ["무오사화", "갑자사화", "기묘사화", "을사사화"], answer: 0,
+    explanation: "1498년 「조의제문」을 사초에 실은 것이 문제가 되어 무오사화가 일어났습니다." },
+
+  // ---------- 과학 ----------
+  { category: "과학", level: 1, question: "물의 화학식은?", choices: ["CO₂", "H₂O", "O₂", "NaCl"], answer: 1,
+    explanation: "물 분자는 수소 원자 2개와 산소 원자 1개로 이루어져 H₂O로 나타냅니다." },
+  { category: "과학", level: 1, question: "태양계에서 가장 큰 행성은?", choices: ["토성", "화성", "목성", "지구"], answer: 2,
+    explanation: "목성은 태양계 행성 중 지름과 질량이 가장 큰 행성입니다." },
+  { category: "과학", level: 1, question: "식물이 광합성을 할 때 공기 중에서 흡수하는 기체는?", choices: ["산소", "질소", "수소", "이산화탄소"], answer: 3,
+    explanation: "식물은 빛에너지를 이용해 이산화탄소와 물로 양분(포도당)을 만들고 산소를 내보냅니다." },
+  { category: "과학", level: 1, question: "1기압에서 물이 끓는 온도는?", choices: ["100℃", "90℃", "120℃", "80℃"], answer: 0,
+    explanation: "1기압에서 물의 끓는점은 100℃입니다. 기압이 낮은 높은 산에서는 더 낮은 온도에서 끓습니다." },
+  { category: "과학", level: 2, question: "사람의 혈액 성분 중 산소를 운반하는 것은?", choices: ["백혈구", "적혈구", "혈소판", "혈장"], answer: 1,
+    explanation: "적혈구 속 헤모글로빈이 산소와 결합해 온몸으로 운반합니다." },
+  { category: "과학", level: 2, question: "상온의 공기 중에서 소리의 속도는 대략 얼마일까?", choices: ["약 3 m/s", "약 34 m/s", "약 340 m/s", "약 3,400 m/s"], answer: 2,
+    explanation: "공기 중 소리의 속도는 15℃에서 약 340 m/s이며, 온도가 높을수록 조금 빨라집니다." },
+  { category: "과학", level: 2, question: "지진이 발생했을 때 관측소에 가장 먼저 도착하는 지진파는?", choices: ["S파", "표면파", "러브파", "P파"], answer: 3,
+    explanation: "P파(Primary wave)는 가장 빠른 지진파라 먼저 도착하고, 그다음 S파, 표면파 순으로 도착합니다." },
+  { category: "과학", level: 2, question: "상온(약 20℃)에서 액체 상태로 존재하는 금속은?", choices: ["수은", "납", "알루미늄", "구리"], answer: 0,
+    explanation: "수은은 녹는점이 약 −39℃라서 상온에서 액체인 유일한 금속입니다." },
+  { category: "과학", level: 3, question: "DNA를 구성하는 염기가 아닌 것은?", choices: ["우라실", "아데닌", "구아닌", "티민"], answer: 0,
+    explanation: "DNA의 염기는 아데닌·구아닌·사이토신·티민이며, 우라실은 RNA에 티민 대신 들어 있습니다." },
+  { category: "과학", level: 3, question: "태양에서 나온 빛이 지구에 도달하는 데 걸리는 시간은 대략 얼마일까?", choices: ["약 8초", "약 8분", "약 80분", "약 8시간"], answer: 1,
+    explanation: "태양~지구 거리 약 1.5억 km를 빛(약 30만 km/s)이 지나는 데 약 500초, 즉 8분 남짓 걸립니다." },
+
+  // ---------- 지리 ----------
+  { category: "지리", level: 1, question: "남한에서 가장 높은 산은?", choices: ["지리산", "설악산", "한라산", "북한산"], answer: 2,
+    explanation: "한라산(1,947m)이 남한에서 가장 높은 산입니다. 백두산은 북한과 중국의 경계에 있습니다." },
+  { category: "지리", level: 1, question: "세계에서 가장 넓은 대양은?", choices: ["대서양", "인도양", "북극해", "태평양"], answer: 3,
+    explanation: "태평양은 지구 표면의 약 3분의 1을 차지하는 가장 넓고 깊은 대양입니다." },
+  { category: "지리", level: 1, question: "프랑스의 수도는?", choices: ["런던", "파리", "로마", "베를린"], answer: 1,
+    explanation: "프랑스의 수도는 센강이 흐르는 파리입니다. 런던은 영국, 로마는 이탈리아, 베를린은 독일의 수도입니다." },
+  { category: "지리", level: 1, question: "우리나라에서 가장 큰 섬은?", choices: ["제주도", "거제도", "강화도", "울릉도"], answer: 0,
+    explanation: "제주도(약 1,833㎢)가 우리나라에서 가장 큰 섬이며, 거제도·진도·강화도가 뒤를 잇습니다." },
+  { category: "지리", level: 2, question: "고대 이집트 문명이 발달한 강은?", choices: ["갠지스강", "나일강", "티그리스강", "아마존강"], answer: 1,
+    explanation: "이집트 문명은 정기적으로 범람하는 나일강 유역에서 발달했습니다." },
+  { category: "지리", level: 2, question: "오스트레일리아(호주)의 수도는?", choices: ["시드니", "멜버른", "캔버라", "브리즈번"], answer: 2,
+    explanation: "시드니와 멜버른의 경쟁 끝에 두 도시 사이에 계획 수도로 건설된 캔버라가 수도입니다." },
+  { category: "지리", level: 2, question: "일본 열도를 이루는 네 개의 큰 섬(홋카이도·혼슈·시코쿠·규슈)에 속하지 않는 것은?", choices: ["혼슈", "규슈", "시코쿠", "오키나와"], answer: 3,
+    explanation: "일본의 4대 섬은 홋카이도·혼슈·시코쿠·규슈이며, 오키나와는 남쪽의 류큐 제도에 속한 섬입니다." },
+  { category: "지리", level: 2, question: "다음 중 바다에 접하지 않은 내륙국은?", choices: ["몽골", "베트남", "태국", "필리핀"], answer: 0,
+    explanation: "몽골은 러시아와 중국 사이의 내륙국입니다. 베트남과 태국은 해안선이 있고 필리핀은 섬나라입니다." },
+  { category: "지리", level: 3, question: "면적이 세계에서 가장 작은 나라는?", choices: ["모나코", "바티칸 시국", "산마리노", "리히텐슈타인"], answer: 1,
+    explanation: "바티칸 시국은 약 0.44㎢로 세계에서 가장 작은 독립국입니다." },
+  { category: "지리", level: 3, question: "대한민국의 최남단 영토인 섬은?", choices: ["거문도", "가거도", "마라도", "백령도"], answer: 2,
+    explanation: "제주도 남쪽의 마라도가 대한민국 최남단입니다. 가거도는 서남쪽, 백령도는 서북쪽 끝에 가깝습니다." },
+
+  // ---------- 일반상식 ----------
+  { category: "일반상식", level: 1, question: "한글의 우수성을 기리는 기념일인 한글날은 매년 언제일까?", choices: ["10월 3일", "10월 9일", "10월 1일", "9월 9일"], answer: 1,
+    explanation: "훈민정음이 반포된 것을 기념해 매년 10월 9일을 한글날로 기념합니다." },
+  { category: "일반상식", level: 1, question: "올림픽 경기 대회는 보통 몇 년마다 열릴까?", choices: ["2년", "3년", "4년", "5년"], answer: 2,
+    explanation: "하계·동계 올림픽은 각각 4년 주기로 열리며, 동·하계가 2년 간격으로 번갈아 열립니다." },
+  { category: "일반상식", level: 1, question: "무지개는 보통 몇 가지 색으로 표현할까?", choices: ["5가지", "6가지", "8가지", "7가지"], answer: 3,
+    explanation: "빨강·주황·노랑·초록·파랑·남색·보라의 7가지 색으로 나타내는 것이 일반적입니다." },
+  { category: "일반상식", level: 1, question: "축구 경기에서 한 팀이 경기장에 동시에 내보낼 수 있는 선수는 골키퍼를 포함해 몇 명일까?", choices: ["11명", "9명", "10명", "12명"], answer: 0,
+    explanation: "축구는 한 팀당 골키퍼 1명과 필드 플레이어 10명, 총 11명이 경기를 합니다." },
+  { category: "일반상식", level: 2, question: "속담 \"소 잃고 ○○○ 고친다\"의 빈칸에 알맞은 말은?", choices: ["마구간", "외양간", "대문", "담장"], answer: 1,
+    explanation: "일이 잘못된 뒤에 뒤늦게 손을 써도 소용없다는 뜻으로, 소를 잃은 뒤 외양간을 고친다고 표현합니다." },
+  { category: "일반상식", level: 2, question: "사자성어 \"백문이 불여일견(百聞不如一見)\"의 뜻으로 알맞은 것은?", choices: ["백 번 들어도 한 번 말하는 것만 못하다", "백 번 말하는 것보다 한 번 참는 것이 낫다", "백 번 듣는 것보다 한 번 보는 것이 낫다", "백 번 보아도 한 번 듣는 것만 못하다"], answer: 2,
+    explanation: "직접 눈으로 확인하는 것이 여러 번 전해 듣는 것보다 확실하다는 뜻입니다." },
+  { category: "일반상식", level: 2, question: "노벨상이 수여되는 부문이 아닌 것은?", choices: ["물리학", "문학", "평화", "수학"], answer: 3,
+    explanation: "노벨상에는 수학 부문이 없습니다. 물리학·화학·생리의학·문학·평화 부문과 경제학상이 있습니다." },
+  { category: "일반상식", level: 2, question: "베토벤의 교향곡 중 \"운명\"이라는 별칭으로 불리는 곡은 몇 번일까?", choices: ["5번", "3번", "7번", "9번"], answer: 0,
+    explanation: "교향곡 5번 c단조의 \"따다다단\" 첫 동기가 운명이 문을 두드리는 소리라고 해서 \"운명\"이라 불립니다." },
+  { category: "일반상식", level: 3, question: "대한민국이 하계 올림픽에서 처음으로 금메달을 딴 종목은?", choices: ["양궁", "레슬링", "유도", "태권도"], answer: 1,
+    explanation: "1976년 몬트리올 올림픽에서 양정모 선수가 레슬링 자유형 페더급에서 한국 최초의 올림픽 금메달을 땄습니다." },
+  { category: "일반상식", level: 3, question: "한 나라 안에서 일정 기간 새로 생산된 재화와 서비스의 시장 가치를 합한 경제 지표는?", choices: ["국민총소득(GNI)", "경상수지", "국내총생산(GDP)", "소비자물가지수"], answer: 2,
+    explanation: "GDP는 국경 안에서 생산된 최종 재화·서비스의 가치를 합한 지표로, 한 나라의 경제 규모를 가늠하는 데 쓰입니다." }
+];
+
+// ===== 상수와 상태 =====
+const CATS = ["한국사", "과학", "지리", "일반상식"];
+const PER_CAT = 10;
+const POINT = 2.5;
+const NUM = ["①", "②", "③", "④"];
+const app = document.getElementById("app");
+
+let state = null;
+let timer = null;
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// 분야 순서는 유지하고, shuffled가 true면 분야 안의 문항 순서와 보기 순서를 섞는다.
+// 보기를 섞은 뒤에는 정답 번호를 다시 계산한다.
+function buildSet(shuffled) {
+  const set = [];
+  CATS.forEach(function (cat) {
+    let qs = QUESTIONS.filter(function (q) { return q.category === cat; });
+    if (shuffled) qs = shuffle(qs);
+    qs.forEach(function (q) {
+      let items = q.choices.map(function (text, i) { return { text: text, correct: i === q.answer }; });
+      if (shuffled) items = shuffle(items);
+      set.push({
+        category: q.category,
+        question: q.question,
+        choices: items.map(function (x) { return x.text; }),
+        answer: items.findIndex(function (x) { return x.correct; }),
+        explanation: q.explanation
+      });
+    });
+  });
+  return set;
+}
+
+function newState(shuffled) {
+  const set = buildSet(shuffled);
+  return { screen: "start", set: set, answers: set.map(function () { return null; }), idx: 0, onlyWrong: false, open: {} };
+}
+
+function clearTimer() { if (timer) { clearTimeout(timer); timer = null; } }
+function go(screen) { clearTimer(); state.screen = screen; render(); window.scrollTo(0, 0); }
+
+function calc() {
+  const perCat = {};
+  CATS.forEach(function (c) { perCat[c] = 0; });
+  let correct = 0;
+  state.set.forEach(function (q, i) {
+    if (state.answers[i] === q.answer) { correct++; perCat[q.category]++; }
+  });
+  return { correct: correct, total: correct * POINT, perCat: perCat };
+}
+
+function grade(score) {
+  if (score >= 90) return { name: "상식 박사", msg: "거의 모르는 게 없는 걸어 다니는 백과사전이에요!" };
+  if (score >= 70) return { name: "상식 달인", msg: "탄탄한 상식을 갖췄어요. 조금만 더 하면 박사예요!" };
+  if (score >= 50) return { name: "상식 도전자", msg: "절반은 넘겼어요. 오답을 복습하면 쑥쑥 늘 거예요!" };
+  return { name: "상식 새싹", msg: "이제 막 자라는 중이에요. 해설을 읽고 다시 도전해 보세요!" };
+}
+
+function fmt(n) { return Number.isInteger(n) ? String(n) : n.toFixed(1); }
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+// ===== 화면 =====
+function render() {
+  const fn = { start: viewStart, quiz: viewQuiz, transition: viewTransition, confirm: viewConfirm, result: viewResult }[state.screen];
+  app.innerHTML = fn();
+}
+
+function viewStart() {
+  const chips = CATS.map(function (c) {
+    return '<div class="cat-chip" data-cat="' + c + '">' + c + '<small>' + PER_CAT + '문항</small></div>';
+  }).join("");
+  return '<section class="card center">' +
+    '<div class="big">🧠</div>' +
+    '<h1>종합 상식 퀴즈</h1>' +
+    '<p class="muted">4개 분야 × 10문항, 총 40문항 (4지선다)</p>' +
+    '<div class="cat-grid">' + chips + '</div>' +
+    '<p class="muted">문항당 2.5점, 만점은 100점이에요.<br>오답이나 미응답은 감점 없이 0점이에요.</p>' +
+    '<button class="btn block" data-act="start">시작하기</button>' +
+    '</section>';
+}
+
+function viewQuiz() {
+  const q = state.set[state.idx];
+  const n = state.idx + 1;
+  const total = state.set.length;
+  const sel = state.answers[state.idx];
+  const choices = q.choices.map(function (c, i) {
+    return '<button class="choice' + (sel === i ? " sel" : "") + '" data-act="pick" data-i="' + i + '" aria-pressed="' + (sel === i) + '">' +
+      '<span class="no">' + NUM[i] + '</span><span>' + esc(c) + '</span></button>';
+  }).join("");
+  return '<section class="card" data-cat="' + q.category + '">' +
+    '<div class="q-head"><span class="badge">' + q.category + '</span><span class="count">' + n + ' / ' + total + '</span></div>' +
+    '<div class="bar"><i style="width:' + (n / total * 100) + '%"></i></div>' +
+    '<h2 class="question">' + esc(q.question) + '</h2>' +
+    '<div class="choices">' + choices + '</div>' +
+    '<div class="row">' +
+      '<button class="btn ghost" data-act="prev"' + (state.idx === 0 ? " disabled" : "") + '>이전</button>' +
+      '<button class="btn" data-act="next">다음</button>' +
+    '</div></section>';
+}
+
+function viewTransition() {
+  const done = state.set[state.idx].category;
+  const next = state.set[state.idx + 1].category;
+  return '<section class="card center" data-cat="' + next + '">' +
+    '<div class="big">✅</div>' +
+    '<h2>' + done + ' 완료!</h2>' +
+    '<p class="muted">다음은 <b style="color:var(--accent)">' + next + '</b> 분야예요.</p>' +
+    '<button class="btn block" data-act="cont" style="margin-top:12px">계속하기</button>' +
+    '</section>';
+}
+
+function viewConfirm() {
+  const missing = [];
+  state.answers.forEach(function (a, i) { if (a === null) missing.push(i + 1); });
+  const body = missing.length
+    ? '<p>아직 답하지 않은 문항이 <span class="notice-num">' + missing.length + '</span>개 있어요.</p>' +
+      '<div class="tip">미응답 문항은 오답으로 처리돼요.<br>(' + missing.join(", ") + '번)</div>'
+    : '<p>모든 문항에 답했어요. 제출할까요?</p>';
+  return '<section class="card center">' +
+    '<div class="big">📝</div><h2>제출 확인</h2>' + body +
+    '<div class="row"><button class="btn ghost" data-act="back">돌아가기</button>' +
+    '<button class="btn" data-act="submit">제출하기</button></div></section>';
+}
+
+function viewResult() {
+  const r = calc();
+  const g = grade(r.total);
+  const bars = CATS.map(function (c) {
+    const pts = r.perCat[c] * POINT;
+    return '<div class="cat-score" data-cat="' + c + '"><div class="label"><span>' + c + '</span><span>' + fmt(pts) + ' / ' + (PER_CAT * POINT) + '</span></div>' +
+      '<div class="track"><i style="width:' + (pts / (PER_CAT * POINT) * 100) + '%"></i></div></div>';
+  }).join("");
+
+  let rows = "";
+  let shown = 0;
+  state.set.forEach(function (q, i) {
+    const a = state.answers[i];
+    const ok = a === q.answer;
+    if (state.onlyWrong && ok) return;
+    shown++;
+    const isOpen = !ok && state.open[i];
+    const head = '<' + (ok ? 'div' : 'button') + ' class="item-head' + (ok ? '' : ' clickable') + '"' + (ok ? '' : ' data-act="toggle" data-i="' + i + '" aria-expanded="' + !!isOpen + '"') + '>' +
+      '<span class="num">' + (i + 1) + '</span>' +
+      '<span class="qtext">' + esc(q.question) + '</span>' +
+      '<span class="mark ' + (ok ? 'o">O' : 'x">X') + '</span></' + (ok ? 'div' : 'button') + '>';
+    const detail = !ok
+      ? '<div class="detail" ' + (isOpen ? "" : "hidden") + '>' +
+          '<p><b class="my">내가 고른 답</b> ' + (a === null ? "미응답" : NUM[a] + " " + esc(q.choices[a])) + '</p>' +
+          '<p><b class="ans">정답</b> ' + NUM[q.answer] + " " + esc(q.choices[q.answer]) + '</p>' +
+          '<p class="muted">' + esc(q.explanation) + '</p></div>'
+      : "";
+    rows += '<li class="item" data-cat="' + q.category + '" style="border-left:6px solid var(--accent)">' + head + detail + '</li>';
+  });
+  if (!shown) rows = '<li class="empty">틀린 문항이 없어요. 완벽해요! 🎉</li>';
+
+  return '<section class="card center">' +
+      '<div class="score">' + fmt(r.total) + ' <small>/ 100</small></div>' +
+      '<div class="grade">' + g.name + '</div>' +
+      '<p class="muted" style="margin-top:10px">' + g.msg + '</p>' +
+    '</section>' +
+    '<section class="card" style="margin-top:12px">' +
+      '<div class="section-title" style="margin-top:0">분야별 점수</div>' + bars +
+      '<div class="section-title">문항별 결과 <span class="muted" style="font-weight:400">(X를 누르면 해설)</span></div>' +
+      '<ul class="list">' + rows + '</ul>' +
+      '<div class="row">' +
+        '<button class="btn ghost" data-act="wrong">' + (state.onlyWrong ? "전체 보기" : "오답만 보기") + '</button>' +
+        '<button class="btn" data-act="retry">다시 풀기</button>' +
+      '</div>' +
+    '</section>';
+}
+
+// ===== 이벤트 =====
+function nextQuestion() {
+  const i = state.idx;
+  if (i === state.set.length - 1) { go("confirm"); return; }
+  const endOfCat = (i + 1) % PER_CAT === 0;
+  if (endOfCat) {
+    go("transition");
+    timer = setTimeout(function () { if (state.screen === "transition") cont(); }, 2000);
+  } else {
+    state.idx++;
+    render();
+  }
+}
+function cont() { state.idx++; go("quiz"); }
+
+app.addEventListener("click", function (e) {
+  const el = e.target.closest("[data-act]");
+  if (!el) return;
+  switch (el.dataset.act) {
+    case "start": state.idx = 0; go("quiz"); break;
+    case "pick": state.answers[state.idx] = Number(el.dataset.i); render(); break;
+    case "prev": if (state.idx > 0) { state.idx--; render(); } break;
+    case "next": nextQuestion(); break;
+    case "cont": cont(); break;
+    case "back": state.idx = state.set.length - 1; go("quiz"); break;
+    case "submit": state.onlyWrong = false; state.open = {}; go("result"); break;
+    case "toggle": state.open[el.dataset.i] = !state.open[el.dataset.i]; render(); break;
+    case "wrong": state.onlyWrong = !state.onlyWrong; render(); break;
+    case "retry": state = newState(true); state.screen = "quiz"; clearTimer(); render(); window.scrollTo(0, 0); break;
+  }
+});
+
+state = newState(false);
+render();
+</script>
+</body>
+</html>
